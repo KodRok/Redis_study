@@ -1,0 +1,35 @@
+### 1. Создаем товар (получит id = 1)
+POST http://localhost:8080/api/products
+Content-Type: application/json
+
+{
+  "name": "MacBook Pro",
+  "price": 2500.0
+}
+
+### 2. Чтение С КЭШЕМ — первый запрос (ожидаем cache_miss и ~1000+ мс)
+GET http://localhost:8080/api/products/1?useCache=true
+
+### 3. Чтение С КЭШЕМ — второй запрос (ожидаем cache_hit и ~5-15 мс!)
+GET http://localhost:8080/api/products/1?useCache=true
+
+### 4. Сравнение: чтение БЕЗ КЭША (ожидаем cache_bypassed и снова ~1000+ мс)
+GET http://localhost:8080/api/products/1?useCache=false
+
+### 5. Обновление PUT — должно инвалидировать (удалить) ключ из Redis
+PUT http://localhost:8080/api/products/1
+Content-Type: application/json
+
+{
+  "name": "MacBook Pro M3",
+  "price": 2700.0
+}
+
+### 6. Чтение после PUT — снова cache_miss (идет в БД за новой ценой и пишет в Redis)
+GET http://localhost:8080/api/products/1?useCache=true
+
+### 7. Повторное чтение — снова cache_hit (мгновенно отдает обновленный товар)
+GET http://localhost:8080/api/products/1?useCache=true
+
+### 8. Удаление DELETE — удаляет из БД и инвалидирует ключ в Redis
+DELETE http://localhost:8080/api/products/1
